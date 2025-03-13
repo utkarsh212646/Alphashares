@@ -18,6 +18,7 @@ app = Flask(__name__)
 
 class FileShareBot(Client):
     def __init__(self):
+        """Initialize the Telegram bot with API credentials and database connection."""
         super().__init__(
             name="FileShareBot",
             api_id=config.API_ID,
@@ -30,7 +31,7 @@ class FileShareBot(Client):
         logger.info("Bot Initialized!")
 
     def start(self):
-        """Start the bot and set up necessary configurations"""
+        """Start the bot and connect to Telegram."""
         if not self._is_running:
             super().start()
             self._is_running = True
@@ -38,7 +39,7 @@ class FileShareBot(Client):
             logger.info(f"Bot Started as {me.first_name}")
             logger.info(f"Username: @{me.username}")
             logger.info("Bot is ready to handle updates!")
-            
+
             # Initialize database connection
             try:
                 self.db = Database()
@@ -48,18 +49,26 @@ class FileShareBot(Client):
                 raise
 
     def stop(self):
-        """Stop the bot gracefully"""
+        """Stop the bot gracefully."""
         if self._is_running:
             super().stop()
             self._is_running = False
             logger.info("Bot Stopped")
+
+    def process_update(self, update):
+        """Handle updates received via webhook."""
+        try:
+            self.loop.create_task(self.dispatcher.updates_handler(update))  # Process update asynchronously
+            logger.info(f"Processed update: {update}")
+        except Exception as e:
+            logger.error(f"Error processing update: {str(e)}")
 
 # Initialize bot as a global variable
 bot = FileShareBot()
 
 @app.route('/')
 def home():
-    """Basic route for health check"""
+    """Basic route for health check."""
     return jsonify({
         "status": "alive",
         "timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
@@ -68,7 +77,7 @@ def home():
 
 @app.route('/health')
 def health_check():
-    """Health check endpoint for monitoring"""
+    """Health check endpoint for monitoring."""
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
@@ -76,14 +85,14 @@ def health_check():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    """Handle incoming updates from Telegram"""
+    """Handle incoming updates from Telegram via webhook."""
     try:
         if not request.is_json:
             logger.warning("Received non-JSON request")
             return jsonify({"status": "error", "message": "Content-Type must be application/json"}), 400
 
         update_data = request.get_json()
-        
+
         # Log the incoming update (excluding sensitive data)
         logger.info(f"Received update type: {update_data.get('message', {}).get('text', 'No text')}")
 
@@ -108,7 +117,7 @@ def webhook():
         }), 500
 
 def run_flask():
-    """Run the Flask application"""
+    """Run the Flask application."""
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -116,7 +125,7 @@ if __name__ == "__main__":
     try:
         # Start the bot
         bot.start()
-        
+
         # Run the Flask app
         run_flask()
     except KeyboardInterrupt:
