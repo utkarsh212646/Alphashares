@@ -58,7 +58,7 @@ class FileShareBot(Client):
     def process_update(self, update):
         """Handle updates received via webhook."""
         try:
-            self.loop.create_task(self.dispatcher.updates_handler(update))  # Process update asynchronously
+            self.loop.create_task(self.dispatcher.dispatch(update))  # Process update asynchronously
             logger.info(f"Processed update: {update}")
         except Exception as e:
             logger.error(f"Error processing update: {str(e)}")
