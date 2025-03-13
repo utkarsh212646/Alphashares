@@ -5,6 +5,7 @@ import config
 import os
 import logging
 from datetime import datetime
+from pyrogram.types import Update
 
 # Set up logging
 logging.basicConfig(
@@ -30,12 +31,12 @@ class FileShareBot(Client):
         self._is_running = False
         logger.info("Bot Initialized!")
 
-    def start(self):
+    async def start(self):
         """Start the bot and connect to Telegram."""
         if not self._is_running:
-            super().start()
+            await super().start()
             self._is_running = True
-            me = self.get_me()
+            me = await self.get_me()
             logger.info(f"Bot Started as {me.first_name}")
             logger.info(f"Username: @{me.username}")
             logger.info("Bot is ready to handle updates!")
@@ -48,17 +49,18 @@ class FileShareBot(Client):
                 logger.error(f"Database connection failed: {str(e)}")
                 raise
 
-    def stop(self):
+    async def stop(self):
         """Stop the bot gracefully."""
         if self._is_running:
-            super().stop()
+            await super().stop()
             self._is_running = False
             logger.info("Bot Stopped")
 
-    def process_update(self, update):
+    async def process_update(self, update_data):
         """Handle updates received via webhook."""
         try:
-            self.loop.create_task(self.dispatcher.dispatch(update))  # Process update asynchronously
+            update = Update.parse_obj(update_data)
+            await super().process_update(update)
             logger.info(f"Processed update: {update}")
         except Exception as e:
             logger.error(f"Error processing update: {str(e)}")
@@ -84,7 +86,7 @@ def health_check():
     }), 200
 
 @app.route('/webhook', methods=['POST'])
-def webhook():
+async def webhook():
     """Handle incoming updates from Telegram via webhook."""
     try:
         if not request.is_json:
@@ -98,7 +100,7 @@ def webhook():
 
         try:
             # Process the update
-            bot.process_update(update_data)
+            await bot.process_update(update_data)
             return jsonify({"status": "success"}), 200
         except Exception as e:
             logger.error(f"Error processing update: {str(e)}")
@@ -123,15 +125,19 @@ def run_flask():
 
 if __name__ == "__main__":
     try:
+        import asyncio
+        # Create event loop
+        loop = asyncio.get_event_loop()
+        
         # Start the bot
-        bot.start()
+        loop.run_until_complete(bot.start())
 
         # Run the Flask app
         run_flask()
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
-        bot.stop()
+        loop.run_until_complete(bot.stop())
     except Exception as e:
         logger.critical(f"Critical error: {str(e)}")
-        bot.stop()
+        loop.run_until_complete(bot.stop())
         raise
