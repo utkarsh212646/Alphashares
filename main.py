@@ -1,6 +1,6 @@
 #AlphaShare bot join @Thealphabotz
 from pyrogram import Client, idle
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from database import Database
 import config
 import asyncio
@@ -14,6 +14,11 @@ app = Flask(__name__)
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.json
+    
+    return jsonify({"status": "received"}), 200
 
 class FileShareBot(Client):
     def __init__(self):
