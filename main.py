@@ -98,7 +98,7 @@ def webhook():
 
         try:
             # Process the update
-            bot.invoke_update(update_data)
+            bot.process_update(update_data)
             return jsonify({"status": "success"}), 200
         except Exception as e:
             logger.error(f"Error processing update: {str(e)}")
